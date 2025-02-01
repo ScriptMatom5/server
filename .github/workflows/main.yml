@@ -1,0 +1,55 @@
+name: Minecraft Server
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */5 * * *'  # Запуск раз в 5 часов
+
+jobs:
+  start-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторий
+        uses: actions/checkout@v3
+
+      - name: Установка зависимостей
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-8-jre-headless unzip wget
+
+      - name: Загрузка и установка xTunnel
+        run: |
+          wget https://files.xtunnel.ru/xtunnel/1.0.14/xTunnel.linux-x64.1.0.14.zip
+          unzip xTunnel.linux-x64.1.0.14.zip -d xTunnel
+          chmod +x xTunnel/xTunnel
+
+      - name: Настройка туннеля
+        run: |
+          ./xTunnel/xTunnel -k ${{ secrets.XTUNNEL_KEY }} &
+          sleep 5
+          ./xTunnel/xTunnel tcp 25565 &
+
+      - name: Загрузка и запуск сервера
+        run: |
+          wget -O forge-1.16.5-installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/1.16.5-36.2.39/forge-1.16.5-36.2.39-installer.jar
+          java -jar forge-1.16.5-installer.jar --installServer
+          echo "eula=true" > eula.txt
+          java -Xmx4G -Xms2G -jar forge-1.16.5-36.2.39.jar nogui &
+          sleep 18000  # Ожидание 5 часов
+
+      - name: Сохранение и архивация мира
+        run: |
+          tar -czvf world-backup.tar.gz world/
+          mv world-backup.tar.gz $GITHUB_WORKSPACE/
+
+      - name: Загружка мира в артефакты
+        uses: actions/upload-artifact@v3
+        with:
+          name: world-backup
+          path: world-backup.tar.gz
+
+      - name: Запуск нового workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Minecraft Server
