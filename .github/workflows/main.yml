@@ -44,7 +44,7 @@ jobs:
           mv world-backup.tar.gz $GITHUB_WORKSPACE/
 
       - name: Загружка мира в артефакты
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: world-backup
           path: world-backup.tar.gz
